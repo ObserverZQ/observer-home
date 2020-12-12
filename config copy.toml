@@ -1,8 +1,8 @@
-baseURL = "https://observerzq.github.io/ObzerverZQ.github.io/"
+baseurl = "https://example.com"
 languageCode = "en-us"
 theme = "hugo-theme-stack"
 paginate = 5
-title = "Observer的小家"
+title = "Example Site"
 disqusShortname = "hugo-theme-stack"            # Change it to your Disqus shortname before using
 DefaultContentLanguage = "en"                   # Theme i18n support
 
@@ -21,7 +21,7 @@ DefaultContentLanguage = "en"                   # Theme i18n support
         
     [params.sidebar]
         emoji = "🍥"
-        subtitle = "一个前端小白."
+        subtitle = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
         [params.sidebar.avatar]
             local = true
             src = "img/avatar.png"
@@ -49,7 +49,12 @@ DefaultContentLanguage = "en"                   # Theme i18n support
             path = "archives"       
         [params.widgets.tagCloud]
             limit = 10
-              
+            
+    [params.opengraph]
+        [params.opengraph.twitter]
+            site = ""
+            card = "summary_large_image"
+            
     [params.defaultImage]
         [params.defaultImage.opengraph]
             enabled = false
@@ -60,15 +65,9 @@ DefaultContentLanguage = "en"                   # Theme i18n support
     [[menu.main]]
         identifier = "home"
         name = "Home"
-        url = ""
+        url = "/"
         weight = -100
         pre = "home"
-    [[menu.main]]
-        identifier = "posts"
-        name = "Posts"
-        url = "posts"
-        weight = -90
-        pre = "user"
     [[menu.main]]
         identifier = "about-cn"
         name = "About"

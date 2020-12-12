@@ -1,1 +1,4 @@
 
+[submodule "public"]
+	path = public
+	url = git@github.com:ObserverZQ/ObzerverZQ.github.io.git
