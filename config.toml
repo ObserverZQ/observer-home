@@ -64,7 +64,7 @@ DefaultContentLanguage = "en"                   # Theme i18n support
         weight = -100
         pre = "home"
     [[menu.main]]
-        identifier = "posts"
+        identifier = "post"
         name = "Posts"
         url = "post"
         weight = -90
