@@ -58,7 +58,7 @@ const routes = [
 新的导航系统更加具有一致性，它改善了滚动行为的体验，使其更加接近原生浏览器的行为。 它还为用户提供了有关导航状态的几乎更多信息，用户可以用这些信息，通过 ProgressBar和 Modal之类的全局 UI 元素让用户的体验变得更好。
 
 ## 更强大的 Devtools
-多亏了新的Vue Devtools[4]，Vue Router 能够和浏览器进行以下更高级的整合。
+多亏了新的[Vue Devtools](https://chrome.google.com/webstore/detail/vuejs-devtools/ljjemllljcmogpfapbkkighbhhppjdbg)，Vue Router 能够和浏览器进行以下更高级的整合。
 
 1. 时间轴记录路由变化：
 ![Timeline](640.png) 
@@ -66,7 +66,7 @@ const routes = [
 ![Routes directory](640_1.png) 
 
 ## 更好的路由守卫
-### Vue router3:
+### beforeEach
 ```javascript
 // BAD
 router.beforeEach((to, from, next) => {
@@ -81,7 +81,6 @@ router.beforeEach((to, from, next) => {
 })
 ```
 **确保 next 函数在任何给定的导航守卫中都被严格调用一次。它可以出现多于一次，但是只能在所有的逻辑路径都不重叠的情况下，否则钩子永远都不会被解析或报错。**
-### Vue Router 4
 和next说拜拜，现在确认跳转不需要再手动执行这个函数了，而是根据你的返回值来决定行为。同样支持异步返回 Promise。
 
 现在的路由守卫 API 更加友好且合理了，可以完美利用 async await 做异步处理，比如这样：
@@ -91,6 +90,43 @@ router.beforeEach(async (to, from) => {
   // canUserAccess() returns `true` or `false`
   return await canUserAccess(to)
 })
+```
+### 路由独享的守卫
+现在beforeEnter支持传入函数数组，便于复用，例如跳转到某个路由后自动去除所有query和hash
+```javascript
+// vue-router 3
+const router = new VueRouter({
+  routes: [
+    {
+      path: '/foo',
+      component: Foo,
+      beforeEnter: (to, from, next) => {
+        // ...
+      }
+    }
+  ]
+})
+// vue-router 4
+function removeQueryParams(to) {
+  if (Object.keys(to.query).length)
+    return { path: to.path, query: {}, hash: to.hash }
+}
+
+function removeHash(to) {
+  if (to.hash) return { path: to.path, query: to.query, hash: '' }
+}
+const routes = [
+  {
+    path: '/users/:id',
+    component: UserDetails,
+    beforeEnter: [removeQueryParams, removeHash],
+  },
+  {
+    path: '/about',
+    component: UserDetails,
+    beforeEnter: [removeQueryParams],
+  },
+]
 ```
 ## 一致的编码
 编码方式（Encoding）做了统一的适配，现在将在不同的浏览器和路由位置属性（params, query 和 hash）中保持一致。router.push是幂等的impodent，及作为参数传递给 router.push() 时，不需要做任何编码，在你使用 $route 或 useRoute()去拿到参数的时候永远是解码（Decoded）的状态。
@@ -106,6 +142,7 @@ Vue Router 4 主要致力于于在改善现有 Router 的同时保持非常相�
 * RFCs 和社区共同探讨出更好用的 API。
 * 开发更轻型的版本。
 
+## Breaking Changes(partial)
 ### Removed * (star or catch all) routes
 Catch all routes (*, /*) must now be defined using a parameter with a custom regex:
 
@@ -141,6 +178,10 @@ const routes = [{ path: '/users/:id', name: 'user', component: UserDetails }]
 router.push({ name: 'user' })
 router.resolve({ name: 'user' })
 ```
+
+## 匹配语法
+todo  
+
 参考资料：  
 [Vue Router 4.0 release log](https://github.com/vuejs/vue-router-next/releases/tag/v4.0.0)  
 [Vue Router 4.0 正式发布！焕然一新。](https://mp.weixin.qq.com/s/mBd5ErYcSXnOl7Ib9iwx5Q)  
@@ -148,4 +189,4 @@ router.resolve({ name: 'user' })
 [Vue Router 4.0 doc](https://next.router.vuejs.org/)  
 [Vue Router 3 - 4 migration](https://next.router.vuejs.org/guide/migration/index.html#breaking-changes)  
 [Vue Router4 dynamic routing](https://next.router.vuejs.org/guide/advanced/dynamic-routing.html)  
-
+[Routes' Matching Syntax](https://next.router.vuejs.org/guide/essentials/route-matching-syntax.html)
