@@ -56,14 +56,51 @@ const routes = [
 
 ## 改进后的导航系统
 新的导航系统更加具有一致性，它改善了滚动行为的体验，使其更加接近原生浏览器的行为。 它还为用户提供了有关导航状态的几乎更多信息，用户可以用这些信息，通过 ProgressBar和 Modal之类的全局 UI 元素让用户的体验变得更好。
+改进动机：
+1. 先前的selector默认使用document.querySelector。但是这个API不支持 /^#\d/即以数字开头的id元素，所以vue3团队决定针对这种参数使用getElementById。但是这个API仍不适用于选择某个id元素内的某个class的元素，比如#1one .container。诸如此类的情况都会导致vue-router抛出document.querySelector failed，让用户产生困惑。
+```javascript
+{ x: number, y: number }
+{ selector: string, offset? : { x: number, y: number }}
+```
+2. 基于Element.scrollTo的参数配置ScrollToOptions，vue-router 4进行了改造
+```javascript
+// vue router 3
+scrollBehavior (to, from, savedPosition) {
+  if (to.hash) {
+    return {
+      selector: to.hash
+    }
+    // return { x: 0, y: 200 }
+  }
+}
+
+// native JS
+element.scrollTo({
+  top: 100,
+  left: 100,
+  behavior: 'smooth'
+});
+// vue router 4
+const router = new Router({
+  scrollBehavior(to, from, savedPosition) {
+    // scroll to id `can~contain-special>characters` + 200px
+    return {
+      el: '#can~contain-special>characters'
+      // top relative offset
+      top: 200
+      // instead of `offset: { y: 200 }`
+    }
+  }
+})
+```
 
 ## 更强大的 Devtools
 多亏了新的[Vue Devtools](https://chrome.google.com/webstore/detail/vuejs-devtools/ljjemllljcmogpfapbkkighbhhppjdbg)，Vue Router 能够和浏览器进行以下更高级的整合。
 
 1. 时间轴记录路由变化：
-![Timeline](640.png) 
+![Timeline](timeline.png) 
 2. 完整 route 目录，能够帮助你轻松进行调试：
-![Routes directory](640_1.png) 
+![Routes directory](routes.png) 
 
 ## 更好的路由守卫
 ### beforeEach
@@ -132,7 +169,7 @@ const routes = [
 编码方式（Encoding）做了统一的适配，现在将在不同的浏览器和路由位置属性（params, query 和 hash）中保持一致。router.push是幂等的impodent，及作为参数传递给 router.push() 时，不需要做任何编码，在你使用 $route 或 useRoute()去拿到参数的时候永远是解码（Decoded）的状态。
 
 ## 迁移成本低
-Vue Router 4 主要致力于于在改善现有 Router 的同时保持非常相似的 API，如果你已经很上手旧版的 Vue Router 了，那你的迁移会做的很顺利，可以查看文档中的完整迁移指南[5]。
+Vue Router 4 主要致力于于在改善现有 Router 的同时保持非常相似的 API，如果你已经很上手旧版的 Vue Router 了，那你的迁移会做的很顺利，可以查看文档中的完整迁移指南。
 
 ## 展望未来
 在过去的几个月中，Vue Router 一直稳定而且好用，现在它可以做些更好玩的事儿了：
@@ -143,31 +180,23 @@ Vue Router 4 主要致力于于在改善现有 Router 的同时保持非常相�
 * 开发更轻型的版本。
 
 ## Breaking Changes(partial)
-### Removed * (star or catch all) routes
-Catch all routes (*, /*) must now be defined using a parameter with a custom regex:
+### New history option to replace mode
+The mode: 'history' option has been replaced with a more flexible one named history. Depending on which mode you were using, you will have to replace it with the appropriate function:
 
+* "history": createWebHistory()
+* "hash": createWebHashHistory()
+* "abstract": createMemoryHistory()
+
+Here is a full snippet:
 ```javascript
-const routes = [
-  // pathMatch is the name of the param, e.g., going to /not/found yields
-  // { params: { pathMatch: ['not', 'found'] }}
-  // this is thanks to the last *, meaning repeated params and it is necessary if you
-  // plan on directly navigating to the not-found route using its name
-  { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound },
-  // if you omit the last `*`, the `/` character in params will be encoded when resolving or pushing
-  { path: '/:pathMatch(.*)', name: 'bad-not-found', component: NotFound },
-]
-// bad example if using named routes:
-router.resolve({
-  name: 'bad-not-found',
-  params: { pathMatch: 'not/found' },
-}).href // '/not%2Ffound'
-// good example:
-router.resolve({
-  name: 'not-found',
-  params: { pathMatch: ['not', 'found'] },
-}).href // '/not/found'
-```
+import { createRouter, createWebHistory } from 'vue-router'
+// there is also createWebHashHistory and createMemoryHistory
 
+createRouter({
+  history: createWebHistory('/base-directory/'),
+  routes: [],
+})
+```
 ### Missing required params on named routes
 Pushing or resolving a named route without its required params will throw an error:
 ```javascript
@@ -184,9 +213,10 @@ todo
 
 参考资料：  
 [Vue Router 4.0 release log](https://github.com/vuejs/vue-router-next/releases/tag/v4.0.0)  
-[Vue Router 4.0 正式发布！焕然一新。](https://mp.weixin.qq.com/s/mBd5ErYcSXnOl7Ib9iwx5Q)  
+[Vue Router 4.0 正式发布！焕然一新。](https://mp.weixin.qq.com/s/mBd5ErYcSXnOl7Ib9iwx5Q)
 [Vue Router 3.0 文档](https://router.vuejs.org/zh/guide/essentials/dynamic-matching.html#%E6%8D%95%E8%8E%B7%E6%89%80%E6%9C%89%E8%B7%AF%E7%94%B1%E6%88%96-404-not-found-%E8%B7%AF%E7%94%B1)  
 [Vue Router 4.0 doc](https://next.router.vuejs.org/)  
 [Vue Router 3 - 4 migration](https://next.router.vuejs.org/guide/migration/index.html#breaking-changes)  
-[Vue Router4 dynamic routing](https://next.router.vuejs.org/guide/advanced/dynamic-routing.html)  
+[Vue Router4 dynamic routing](https://next.router.vuejs.org/guide/advanced/dynamic-routing.html)
 [Routes' Matching Syntax](https://next.router.vuejs.org/guide/essentials/route-matching-syntax.html)
+[router-scroll-position](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0035-router-scroll-position.md)
