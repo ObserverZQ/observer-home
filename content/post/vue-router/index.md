@@ -16,6 +16,65 @@ Vue Router 现在分为三个模块：
 * History 实现： 处理地址栏，并且特定于 Vue Router 运行的环境（节点，浏览器，移动设备等）
 * Router 匹配器：处理类似 /users/:id 的路由解析和优先级处理。
 * Router: 将一切连接在一起，并处理路由特定功能，例如导航守卫。
+
+```
+|____types
+| |____typeGuards.ts // 对route进行校验
+| |____index.ts // type和interface
+|____router.ts // connects everything together and handle routing specific features like navigation guards
+|____RouterLink.ts
+|____errors.ts
+|____globalExtensions.ts
+|____injectionSymbols.ts
+|____utils
+| |____callbacks.ts
+| |____README.md
+| |____index.ts
+| |____env.ts
+|____devtools.ts
+|____location.ts
+|____matcher // handles the parsing of routes /users/:id and its ranking
+| |____pathTokenizer.ts // path解析器，生成token数组tokenizePath
+| |____pathMatcher.ts // 提供createRouteRecordMatcher方法供index调用，在addRoute时创建matcher
+| |____pathParserRanker.ts // 对每一个setment计算score
+| |____types.ts // 定义RouteRecordNormalized作为RouteRecord
+| |____index.ts // 定义并实现RouterMatcher，内部定义matcherMap路由映射；对RouteRecord、RouteProps进行normalize
+|____warning.ts
+|____RouterView.ts
+|____scrollBehavior.ts
+|____history // handles the address bar and is specific to the environment Vue Router runs on (Node, Browser, Mobile, etc)
+| |____common.ts // 列举一些通用的用于History API的interface、type、enum和在两个模式下通用的方法
+| |____hash.ts // hash模式，createWebHashHistory
+| |____html5.ts // html5模式，createWebHistory
+| |____memory.ts // abstract模式，createMemoryHistory, 记录路由队列、监听器和当前位置，实现router方法。如果发现没有浏览器的 API，路由会自动强制进入这个模式
+|____global.d.ts
+|____useApi.ts
+|____index.ts
+|____query.ts
+|____encoding.ts
+|____navigationGuards.ts // 路由守卫
+```
+
+
+```javascript
+// src/history/html5.ts
+/**
+ * Creates a normalized history location from a window.location object
+ * @param location -
+ */
+function createCurrentLocation(
+  base: string,
+  location: Location
+): HistoryLocation {}
+function useHistoryListeners(base: string,
+  historyState: ValueContainer<StateEntry>,
+  currentLocation: ValueContainer<HistoryLocation>,
+  replace: RouterHistory['replace']
+){}
+function useHistoryStateNavigation(base: string) {}
+export function createWebHistory(base?: string): RouterHistory {}
+
+```
 ## 动态路由
 ### Vue Router3
 ```
@@ -28,13 +87,11 @@ Vue Router 现在分为三个模块：
   path: '/user-*'
 }
 ```
-当使用通配符路由时，请确保路由的顺序是正确的，也就是说含有通配符的路由应该放在最后。路由 { path: '*' } 通常用于客户端 404 错误。如果你使用了History 模式，请确保正确配置你的服务器。
-有时候，同一个路径可以匹配多个路由，此时，匹配的优先级就按照路由的定义顺序：谁先定义的，谁的优先级就最高。
+vue-router 3使用 [path-to-regexp](https://github.com/pillarjs/path-to-regexp/tree/v1.7.0
+) 作为路径匹配引擎。
+有时候，同一个路径可以匹配多个路由，此时，匹配的优先级就按照路由的定义顺序：谁先定义的，谁的优先级就最高。当使用通配符路由时，必须确保路由的顺序是正确的，也就是说含有通配符的路由应该放在最后。路由 { path: '*' } 通常用于客户端 404 错误。如果你使用了History 模式，请确保正确配置你的服务器。
 
-vue-router 使用 [path-to-regexp](https://github.com/pillarjs/path-to-regexp/tree/v1.7.0
-) 作为路径匹配引擎，所以支持很多高级的匹配模式，例如：可选的动态路径参数、匹配零个或多个、一个或多个，甚至是自定义正则匹配。查看它的文档学习高阶的路径匹配，还有这个例子 展示 vue-router 怎么使用这类匹配。
-
-### Vue Router4
+### Vue Router 4
 不再使用path-to-regexp，而是使用自己的转化系统。新增了有自动优先级排名的高级路径解析功能，用户新现在可以以随意的顺序定义路由，因为 Router 会根据 URL 字符串表示来猜测应该匹配的路由。
 举个例子来说，你同时写了 /users 和 /:w+ 这两个路由：
 ```javascript
@@ -165,9 +222,6 @@ const routes = [
   },
 ]
 ```
-## 一致的编码
-编码方式（Encoding）做了统一的适配，现在将在不同的浏览器和路由位置属性（params, query 和 hash）中保持一致。router.push是幂等的impodent，及作为参数传递给 router.push() 时，不需要做任何编码，在你使用 $route 或 useRoute()去拿到参数的时候永远是解码（Decoded）的状态。
-
 ## 迁移成本低
 Vue Router 4 主要致力于于在改善现有 Router 的同时保持非常相似的 API，如果你已经很上手旧版的 Vue Router 了，那你的迁移会做的很顺利，可以查看文档中的完整迁移指南。
 
@@ -208,15 +262,13 @@ router.push({ name: 'user' })
 router.resolve({ name: 'user' })
 ```
 
-## 匹配语法
-todo  
-
 参考资料：  
+[Vue Router 3.0 文档](https://router.vuejs.org/zh/guide/essentials/dynamic-matching.html#%E6%8D%95%E8%8E%B7%E6%89%80%E6%9C%89%E8%B7%AF%E7%94%B1%E6%88%96-404-not-found-%E8%B7%AF%E7%94%B1)
 [Vue Router 4.0 release log](https://github.com/vuejs/vue-router-next/releases/tag/v4.0.0)  
-[Vue Router 4.0 正式发布！焕然一新。](https://mp.weixin.qq.com/s/mBd5ErYcSXnOl7Ib9iwx5Q)
-[Vue Router 3.0 文档](https://router.vuejs.org/zh/guide/essentials/dynamic-matching.html#%E6%8D%95%E8%8E%B7%E6%89%80%E6%9C%89%E8%B7%AF%E7%94%B1%E6%88%96-404-not-found-%E8%B7%AF%E7%94%B1)  
 [Vue Router 4.0 doc](https://next.router.vuejs.org/)  
-[Vue Router 3 - 4 migration](https://next.router.vuejs.org/guide/migration/index.html#breaking-changes)  
+[Vue Router Migration](https://next.router.vuejs.org/guide/migration/index.html#breaking-changes)
 [Vue Router4 dynamic routing](https://next.router.vuejs.org/guide/advanced/dynamic-routing.html)
 [Routes' Matching Syntax](https://next.router.vuejs.org/guide/essentials/route-matching-syntax.html)
 [router-scroll-position](https://github.com/vuejs/rfcs/blob/master/active-rfcs/0035-router-scroll-position.md)
+[Path Ranker](https://paths.esm.dev/?p=AAMeJSyAwR4UbFDAFxAcAGAIJXMAAA..)
+[vue-router-next GitHub repo](https://github.com/vuejs/vue-router-next)
