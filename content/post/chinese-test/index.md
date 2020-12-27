@@ -3,6 +3,7 @@ title: 终于的终于
 description: 博客搭好啦啦啦啦
 date: 2020-09-09
 slug: test-chinese
+draft: true
 image: helena-hertz-wWZzXlDpMog-unsplash.jpg
 categories:
     - Test
