@@ -20,11 +20,11 @@ DefaultContentLanguage = "en"                   # Theme i18n support
         lastUpdated = "Jan 02, 2006 15:04 MST"
         
     [params.sidebar]
-        emoji = "🍥"
+        emoji = "👩🏻‍💻"
         subtitle = "一个前端小白."
         [params.sidebar.avatar]
             local = true
-            src = "img/avatar.png"
+            src = "img/avatar.jpg"
         
     [params.article]
         math = false
