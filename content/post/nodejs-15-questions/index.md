@@ -2,7 +2,7 @@
 title: Vue Router 4.0特性简介
 description: 本文主要介绍vue-router4.0与vue-router3的对比以及新特性
 date: 2020-12-13T19:23:26+08:00
-image: cover.jpg
+image: 640.jpg
 categories:
     - 前端
 tags:
