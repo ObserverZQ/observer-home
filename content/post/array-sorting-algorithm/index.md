@@ -2,7 +2,7 @@
 title: JavaScript实现常见排序算法
 description: 主要介绍冒泡排序、选择排序、插入排序、合并排序、快速排序
 date: 2021-02-26T19:11:26+08:00
-image: array_sorting_algorithm.jpg
+image: array_sorting_algorithm.png
 categories:
     - 算法
     - 排序
