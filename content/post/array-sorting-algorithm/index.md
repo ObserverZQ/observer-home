@@ -1,6 +1,6 @@
 ---
-title: Node.js 常见问题15条
-description: 本文主要介绍Node.js 可能涉及面试的问题
+title: JavaScript实现常见排序算法
+description: 主要介绍冒泡排序、选择排序、插入排序、合并排序、快速排序
 date: 2021-02-26T19:11:26+08:00
 image: array_sorting_algorithm.jpg
 categories:
@@ -12,6 +12,46 @@ tags:
     - algorithm
     - sorting
 ---
+
+### 冒泡排序
+基本思路：从左至右遍历数组，取一个指针指向第一个元素，与下一个元素比较，若该元素更大则前后交换位置，然后指针取下一位，与后一位进行比较，继续这样的循环，这样一轮下来会使得最大值放在数组的末尾，类似吐泡泡一样。之后重新开始循环上述过程，将第二大的元素放在倒数第二位。
+```javascript
+function bubbleSort(array) {
+    let isSorted = true;
+    let len = array.length;
+    for (let i = 0; i < len; i ++) {
+        for (let j = 0; j < len - i - 1; j++) {
+            if (array[j] > array[j +1 ]) {
+                [array[j], array[j + 1]] = [array[j + 1], array[j]];
+                isSorted = false;
+            }
+        }
+        if (isSorted) {
+            break;
+        }
+    }
+    return array;
+}
+
+```
+### 选择排序
+基本思路：从左至右遍历数组，比较一圈后得到最小值的索引，与索引0的元素交换位置；接着从第2位开始循环上述操作，将第二小的元素放在索引为1的位置，以此类推。每次遍历的时间为O(n)，这样的时间复杂度为O(n2)。
+```javascript
+function selectionSort(array) {
+    for (let i = 0, len = array.length; i < len - 1; i++) {
+        let min = i;
+        for (let j = i + 1; j < len; j++) {
+            if (array[j] < array[min]) {
+                min = j;
+            }
+        }
+        [array[i], array[min]] = [array[min], array[i]]
+    }
+    return array;
+}
+```
+
+### 插入排序
 
 ### 快速排序quicksort
 
