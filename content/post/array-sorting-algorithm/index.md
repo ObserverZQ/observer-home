@@ -20,11 +20,8 @@ function bubbleSort(array) {
     let isSorted = true;
     let len = array.length;
     for (let i = 0; i < len; i ++) {
-        for (let j = 0; j < len - i - 1; j++) {
-            if (array[j] > array[j +1 ]) {
-                [array[j], array[j + 1]] = [array[j + 1], array[j]];
-                isSorted = false;
-            }
+        for (let j = 0; （j < len - i - 1） && array[j] > array[j + 1]; j++) {
+            [array[j], array[j + 1]] = [array[j + 1], array[j]];
         }
         if (isSorted) {
             break;
@@ -32,8 +29,8 @@ function bubbleSort(array) {
     }
     return array;
 }
-
 ```
+时间复杂度上，最好情况是O(n)，即数组已经完全排好序，后一个元素永远比前一个元素大，不需要冒泡，只需要遍历一次，平均和最坏情况是O(n2)。
 ### 选择排序
 基本思路：从左至右遍历数组，比较一圈后得到最小值的索引，与索引0的元素交换位置；接着从第2位开始循环上述操作，将第二小的元素放在索引为1的位置，以此类推。每次遍历的时间为O(n)，这样的时间复杂度为O(n2)。
 ```javascript
@@ -50,9 +47,27 @@ function selectionSort(array) {
     return array;
 }
 ```
+时间复杂度上，最好、平均、最坏情况都是O(n2)。
 
 ### 插入排序
+基本思路：从左至右遍历，新元素通过与左边已经排好序的数组逐一比对，插入至左边的数组中，将比遍历到的元素大的元素统统右移一位。
+```javascript
+function insertionSort(array) {
+    for (let i = 0, len = array.length; i++) {
+        let j = i;
+        const temp = array[j];
+        while (j > 0 && temp < array[j - 1]) {
+            array[j] = array[j - 1];
+            j--;
+        }
+        array[j] = temp;
+    }
+    return array;
+}
+```
+时间复杂度上，最好情况为O(n)，即数组已经完全排好序，平均和最坏情况为O(n2)。
 
+下面进入到时间复杂度降低了的快速排序和归并排序。
 ### 快速排序quicksort
 
 #### 法一
@@ -76,7 +91,7 @@ function quickSort(array) {
 }
 ```
 每层实际还是遍历了O(n)个元素，而调用栈共有O(log n)层（相当于二分，所以是2的对数），所以平均情况的时间复杂度为O(n) * O(log n) = O(nlogn)。
-最糟情况下，例如一个已经排好序的数组，基准值从第一个元素取，则调用栈为n层，此时时间复杂度为O(n2)。但是一般都不会遇到最糟情况。
+最糟情况下，例如一个已经排好序的数组，基准值从第一个元素取，则右边分出来的数组拆分为原长度减1的数组，所以调用栈为n层，此时时间复杂度为O(n2)。但是一般都不会遇到最糟情况。
 
 #### 法二
 实现分析：
@@ -129,6 +144,7 @@ function quickSort(unsorted) {
   return quick(unsorted, 0, unsorted.length - 1);
 }
 ```
+时间复杂度上，最好、平均复杂度是O(nlogn)，最坏情况是O(n2)
 
 ### 合并排序mergesort
 基本思路：取位于数组中间的值，将左侧右侧各生成一个新数组（split），然后调用merge函数，各用一个索引进行逐个遍历比较，将较小的推送至结果数组中，直至其中一个数组遍历结束，对有剩余元素的那个数组在尾部加至结果数组。对新数组递归拆分操作，并调用该merge函数，直至左右数组的长度为0。
@@ -168,8 +184,7 @@ function mergeSort(array) {
     return split(array);
 }
 ```
-归并排序的时间复杂度是 O(nlog(n))，是实际工程中可选的排序方案。
-
+时间复杂度上，最好、平均和最坏情况都是 O(nlog(n))。
 ### 对比归并排序与快速排序
 1. 都用了分治的思想。相比选择排序和冒泡排序，归并排序与快速排序使用了切分而不是直接遍历，这有效减少了交换次数。
 2. 归并排序是先切分、后排序，过程可以描述为：切分、切分、切分……排序、排序、排序……
