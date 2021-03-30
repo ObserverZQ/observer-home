@@ -20,8 +20,10 @@ function bubbleSort(array) {
     let isSorted = true;
     let len = array.length;
     for (let i = 0; i < len; i ++) {
-        for (let j = 0; （j < len - i - 1） && array[j] > array[j + 1]; j++) {
-            [array[j], array[j + 1]] = [array[j + 1], array[j]];
+        for (let j = 0; （j < len - i - 1; j++) {
+            if (array[j] > array[j + 1]) {
+                [array[j], array[j + 1]] = [array[j + 1], array[j]];
+            }
             isSorted = false;
         }
         if (isSorted) {
@@ -54,7 +56,7 @@ function selectionSort(array) {
 基本思路：从左至右遍历，新元素通过与左边已经排好序的数组逐一比对，插入至左边的数组中，将比遍历到的元素大的元素统统右移一位。
 ```javascript
 function insertionSort(array) {
-    for (let i = 0, len = array.length; i++) {
+    for (let i = 0, len = array.length; i < len; i++) {
         let j = i;
         const temp = array[j];
         while (j > 0 && temp < array[j - 1]) {
@@ -147,8 +149,20 @@ function quickSort(unsorted) {
 ```
 时间复杂度上，最好、平均复杂度是O(nlogn)，最坏情况是O(n<sup>2</sup>)
 
+#### 法三
+```javascript
+function quickSort (array) {
+    if (array.length < 2) {
+        return array;
+    }
+    let pivot = array[array.length - 1];
+    let left = array.filter((v, i) => v < pivot && i !== array.length - 1);
+    let right = array.filter(v => v > pivot);
+    return [...quickSort(left), pivot, ...quickSort(right)];
+}
+``` 
 ### 合并排序mergesort
-基本思路：取位于数组中间的值，将左侧右侧各生成一个新数组（split），然后调用merge函数，各用一个索引进行逐个遍历比较，将较小的推送至结果数组中，直至其中一个数组遍历结束，对有剩余元素的那个数组在尾部加至结果数组。对新数组递归拆分操作，并调用该merge函数，直至左右数组的长度为0。
+基本思路：取位于数组中间的值，将左侧右侧各生成一个新数组（split），然后调用merge函数，各用一个索引进行逐个遍历比较，将较小的推送至结果数组中，直至其中一个数组遍历结束，对有剩余元素的那个数组在尾部加至结果数组。对新数组递归拆分操作，并调用该merge函数，直至左右数组的长度为1。
 
 将数组从中间切分为两个数组
 切分到最小之后，开始归并操作，即合并两个已排序的数组
@@ -176,16 +190,15 @@ function mergeSort(array) {
         return result;
     }
     function split(array) {
-        const len = array.length / 2
-        let mid = Math.floor(len);
+        const mid = Math.floor(array.length / 2);
         const arrL = array.slice(0, mid);
-        const arrR = array.slice(mid, len);
+        const arrR = array.slice(mid);
         return merge(split(arrL), split(arrR));
     }
     return split(array);
 }
 ```
-时间复杂度上，最好、平均和最坏情况都是 O(nlog(n))。
+时间复杂度上，最好、平均和最坏情况都是 O(nlog(n))。空间复杂度是O(n)。
 ### 对比归并排序与快速排序
 1. 都用了分治的思想。相比选择排序和冒泡排序，归并排序与快速排序使用了切分而不是直接遍历，这有效减少了交换次数。
 2. 归并排序是先切分、后排序，过程可以描述为：切分、切分、切分……排序、排序、排序……
