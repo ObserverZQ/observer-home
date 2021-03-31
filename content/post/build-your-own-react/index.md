@@ -190,3 +190,210 @@ const element = (
   </div>
 )
 ```
+
+# 第2步 render函数
+创建好了element，现在我们要实现自己的render函数，将一个object转换为DOM节点并添加到container中：
+```javascript
+ReactDOM.render(element, container)
+```
+现在，我们只关注添加节点到DOM中。我们稍后会再处理update和delete操作。
+```javascript
+const Didact = {
+    createElement,
+    render
+}
+function render(element, container) {
+    // TODO create dom nodes
+}
+// ...jsx
+// const container = document.getElementById('root')
+Didact.render(element, container);
+```
+
+我们从根据type创建一个DOM node，然后将该node添加到container中开始：
+```javascript
+function render(element, container) {
+    // 在这里也要对text节点特殊处理，如果type为之前设定的TEXT_ELEMENT，则需要调用createTextNode方法
+    const dom = element.type === 'TEXT_ELEMENT' ? document.createTextNode('') : document.createElement(element.type);
+    
+    // 还记得每个element的属性吗？除了children，其余的属性都要绑定到对应的DOM node上
+    const isProperty = key => key !== 'children';
+    Object.keys(element.props).filter(isProperty).forEach(name => {
+        dom[name] = element.props[name];
+    });
+
+    // 然后对element的每个子节点做递归操作，生成DOM node并添加到该element对应的DOM node中，形成真正的DOM树
+    element.children.forEach(child => {
+        render(child, dom);
+    });
+    container.appendChild(dom);
+}
+```
+完成。现在我们有了一个可以将JSX转译为DOM的库了。https://codesandbox.io/s/didact-2-k6rbj?file=/src/index.js
+
+
+# 第3步 concurrent模式
+在添加更多代码前，我们需要做个重构。上面的forEach render递归调用存在一个问题，就是当element树太大时，它可能会阻断主线程太久。
+而且，如果浏览器需要执行高优先级的工作，例如提交用户输入，或者保障动画流畅播放，那么浏览器就要等到它完成渲染。
+
+所以我们要将渲染工作拆分成小的单元，每执行完一个，浏览器发现还有别的是事情要做的话就会中断渲染。
+```javascript
+// 我们用requestIdleCallback来建立一个循环。你可以把它看作setTimeout，但是不是由我们去告诉它什么时候运行，而是由浏览器在主线程空闲是去执行callback。
+
+// React不再使用requestIdleCallback。现在它使用scheduler package。但是在这个用例中它们的概念是类似的。
+let nextUnitOfWork = null;
+// 入参deadline可以用来检查在浏览器需要重新take control之前我们还有多少时间去执行渲染
+function workLoop(deadline) {
+    let shouldYield = false;
+    while (nextUnitOfWork && !shouldYield) {
+        nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+        shouldYield = deadline.timeRemaing() < 1
+    }
+    requestIdleCallback(workLoop)
+}
+requestIdleCallback(workLoop)
+function performUnitOfWork(nextUnitOfWork) {
+    // TODO
+}
+```
+As of截至2019年11月, Concurrent Mode还没有发布稳定版本。循环的稳定版本更像是下面这样：
+```javascript
+while (nextUnitOfWork) {    
+  nextUnitOfWork = performUnitOfWork(   
+    nextUnitOfWork  
+  ) 
+}
+```
+要开始使用这个循环，我们需要设置任务的第一个单元，然后编写performUnitOfWork方法，这个方法不仅执行当前的任务，还会返回下一个单元的任务。
+
+
+# 第4步 fiber树
+我们需要一种形如纤维树的数据结构来组织单元任务。每个React element，都会有一个对应的fiber，它们是一一对应的关系。
+
+举个例子：
+假设我们要渲染一个像这样的element树结构到DOM中：
+```javascript
+Didact.render(
+  <div>
+    <h1>
+      <p />
+      <a />
+    </h1>
+    <h2 />
+  </div>,
+  container
+)
+```
+![fiber1.png](fiber1.png)
+在render函数中我们会创建根fiber，然后将其设为nextUnitOfWork。其余的工作会在performUnitOfWork中进行，在该函数中我们会对每个fiber做以下三件事：
+
+1. add the element to the DOM 将element添加到DOM
+2. create the fibers for the element’s children 为这个fiber的children创建它们自己的fiber
+3. select the next unit of work 选择下一个单元任务
+   
+这样类似纤维的数据结构的一个好处就是由于每个fiber都和自己的第一个子节点、相邻节点和父节点有一个连接，可以很容易确认下一个单元任务，即下一个要进行渲染的element。
+
+* 当我们完成了对一个fiber的任务的执行，如果这个fiber有子节点，那么这个子节点就会成为下一个单元任务。对于本例，当我们完成div这个fiber的工作，下一个单元任务将会是h1这个fiber。
+
+* 如果当前的fiber没有子节点，我们会让它的相邻节点成为下个单元任务。例如，p这个fiber没有子节点，所以我们会在完成渲染它之后移动到a这个fiber。
+![fiber3.png](fiber3.png)
+
+* 而如果这个fiber没有子节点也没有相邻节点，我们会去找它的“叔叔”：父节点的相邻节点，例如本例中的h2。
+![fiber4.png](fiber4.png)
+另外，如果父节点没有相邻节点，我们继续向上沿着父节点寻找，直到找到了有相邻节点的父节点，或者是到达根节点。如果我们到达了根节点，则说明我们已经完成了对这次render的所有任务。
+
+现在让我们用代码进行实现吧！
+
+首先将原先render函数里的代码抽离出来：
+```javascript
+function render(element, container) {
+    // 创建DOM
+    const dom = element.type === 'TEXT_ELEMENT' ? document.createTextNode('') : document.createElement(element.type);
+    const isProperty = key => key !== 'children';
+    Object.keys(element.props).filter(isProperty).forEach(name => {
+        dom[name] = element.props[name];
+    });
+
+    // 对子节点递归调用
+    element.children.forEach(child => {
+        render(child, dom);
+    });
+    // 添加到容器中
+    container.appendChild(dom);
+}
+```
+将创建DOM的部分抽离出来形成一个新的方法createDOM，入参为fiber，即element。稍后我们会用到这个方法。
+```javascript
+function createDom(fiber) {
+    const dom = fiber.type === 'TEXT_ELEMENT' ? document.createTextNode('') : document.createElement(fiber.type);
+    const isProperty = key => key !== 'children';
+    Object.keys(fiber.props)
+        .filter(isProperty)
+        .forEach(name => {
+            dom[name] = fiber.props[name];
+        });
+    return dom;
+}
+```
+然后，在render方法中，我们把fiber树的根节点作为nextUnitOfWork:
+```javascript
+function render (element, container) {
+    // 最初最初的节点为container，一个已有的DOM节点，放在nextUnitOfWork，即fiber的dom属性中
+    // nextUnitOfWork对象还有type属性，最初节点没有自身属性，只有children，包含一个我们创建好的element
+    let nextUnitOfWork = {
+        dom: container,
+        props: {
+            children: [element]
+        }
+    }
+}
+
+let nextUnitOfWork = null
+```
+然后，当浏览器ready后，它会调用我们上面所写的workLoop方法，我们就会开始从root进行渲染工作。
+现在我们来实现performUnitOfWork方法。
+```javascript
+function performUnitOfWork(fiber) {
+    // 1. 首先，我们创建一个新的DOM node，并将其添加到DOM中
+    // 我们用fiber.dom属性去追踪DOM节点信息
+    if (!fiber.dom) {
+        fiber.dom = createDom(fiber);
+    }
+    if (fiber.parent) {
+        fiber.parent.dom.appendChild(fiber.dom);
+    }
+
+    // 2. 然后我们为每一个子节点创建一个新的fiber
+    const elements = fiber.props.children;
+    let prevSibling = null;
+    for (let i = 0; index < elements.length; i++) {
+        const element = elements[i];
+        const newFiber = {
+            type: element.type,
+            props: element.props,
+            dom: null,
+            parent: fiber
+        }
+        // 建立fiber连接，根据索引是否为0设置为当前fiber的child或是上一个子节点的相邻节点
+        if (i === 0) {
+            fiber.child = newFiber;
+        } else {
+            prevSibling.sibling = newFiber;
+        }
+        prevSibling = newFiber;
+    }
+
+    // 3. 最后我们搜索并确立下一个单元任务。我们先试试子节点child，没有child的话就相邻节点=》父节点的相邻节点这样循环搜索。
+    if (fiber.child) {
+        return fiber.child;
+    }
+    let nextFiber = fiber;
+    while (nextFiber) {
+        if (nextFiber.sibling) {
+            return nextFiber.sibling;
+        }
+        nextFiber = nextFiber.parent;
+    }
+}
+```
+以上就是performUnitOfWork方法的实现。
