@@ -304,7 +304,7 @@ Didact.render(
 
 现在让我们用代码进行实现吧！
 
-首先将原先render函数里的代码抽离出来：
+首先将原先render函数里的创建DOM的代码抽离出来：
 ```javascript
 function render(element, container) {
     // 创建DOM
@@ -397,3 +397,83 @@ function performUnitOfWork(fiber) {
 }
 ```
 以上就是performUnitOfWork方法的实现。
+
+
+# 第5步：Render和Commit阶段
+现在我们还面临一个问题。每次我们对一个element进行操作时，都会将一个新的node姐弟那添加到DOM中，但是记住，浏览器可以在我们完成渲染整个树结构之前中断渲染工作去执行更高优先级的任务，在那种情况下，用户会看见一个不完整的UI。我们不希望那种情况发生。所以我们需要将修改DOM的代码片段抽离出来。
+```javascript
+function performUnitOfWork(fiber) {
+    // ...
+    // 修改DOM，需要提出去
+    if (fiber.parent) {
+        fiber.parent.dom.appendChild(fiber.dom);
+    }
+    // ...
+}
+```
+反之，我们需要持续跟踪fiber树的根。我们称它为work in progress root或wipRoot。在render方法中重新命名：
+```javascript
+function render (element, container) {
+    wipRoot = {
+        dom: container,
+        props: {
+            children: [element]
+        }
+    }
+    nextUnitOfWork = wipRoot;
+}
+let nextUnitOfWork = null;
+let wipRoot = null;
+```
+然后，当我们完成了所有的渲染工作（不存在下一个单元任务时）我们将整个fiber树提交到DOM中（每个fiber都已经带有了它对应要渲染到document上的附带属性的DOM节点）。
+```javascript
+function commitRoot() {
+  // TODO add nodes to dom
+}
+function render(element, container) {
+  wipRoot = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  }
+  nextUnitOfWork = wipRoot
+}
+​
+let nextUnitOfWork = null
+let wipRoot = null
+​
+function workLoop(deadline) {
+  let shouldYield = false
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(
+      nextUnitOfWork
+    )
+    shouldYield = deadline.timeRemaining() < 1
+  }
+​  // 没有下一个单元任务，说明fiber树构建完成，整体提交到DOM中
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot()
+  }
+  requestIdleCallback(workLoop)
+}
+​
+requestIdleCallback(workLoop)
+```
+我们在commitRoot方法中实现提交功能。在commitWork里递归添加所有node到DOM树中。
+```javascript
+function commitRoot() {
+    // 这里child就是实际要添加到已有DOM容器节点的根element
+    commitWork(wipRoot.child);
+    wipRoot = null;
+}
+function commitWork(fiber) {
+    if (!fiber) {
+        return;
+    }
+    const fiberParentDom = fiber.parent.dom;
+    fiberParentDom.appendChild(fiber.dom);
+    commitWork(fiber.child);
+    commitWork(fiber.sibling);
+}
+```
