@@ -245,13 +245,14 @@ let nextUnitOfWork = null;
 // 入参deadline可以用来检查在浏览器需要重新take control之前我们还有多少时间去执行渲染
 function workLoop(deadline) {
     let shouldYield = false;
+    // 如果还有任务 && 当前帧还有空闲
     while (nextUnitOfWork && !shouldYield) {
         nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
         shouldYield = deadline.timeRemaing() < 1
     }
-    requestIdleCallback(workLoop)
+    requestIdleCallback(workLoop) // 等待下一帧
 }
-requestIdleCallback(workLoop)
+requestIdleCallback(workLoop) // 启动时间切片
 function performUnitOfWork(nextUnitOfWork) {
     // TODO
 }
@@ -832,6 +833,7 @@ function performUnitOfWork(fiber) {
     } else {
         updateHostComponent(fiber)
     }
+    // 遍历fiber链表
     if (fiber.child) {
         return fiber.child
     }
@@ -976,6 +978,7 @@ function useState(initial) {
     })
     const setState = action => {
         hook.queue.push(action);
+        // 浏览器空闲时进行重新performUnitOfWork
         wipRoot = {
             dom: currentRoot.dom,
             props: currentRoot.props,
@@ -985,7 +988,7 @@ function useState(initial) {
         deletions = [];
     }
     wipFiber.hooks.push(hook);
-    hookIndex++;
+    hookIndex++; // hooks一定要有顺序
     return [hook.state, setState];
 }
 ```

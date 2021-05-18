@@ -20,14 +20,16 @@ function bubbleSort(array) {
     let isSorted = true;
     let len = array.length;
     for (let i = 0; i < len; i ++) {
-        for (let j = 0; （j < len - i - 1; j++) {
+        for (let j = 0; (j < len - i - 1); j++) {
             if (array[j] > array[j + 1]) {
+                isSorted = false;
                 [array[j], array[j + 1]] = [array[j + 1], array[j]];
             }
-            isSorted = false;
         }
         if (isSorted) {
             break;
+        } else {
+            isSorted = true;
         }
     }
     return array;
@@ -106,23 +108,19 @@ function quickSort(array) {
 function quickSort(unsorted) {
   function partition(array, left, right) {
     const pivot = array[ Math.floor((left + right) / 2) ];
-
     while (left <= right) {
       while (array[left] < pivot) {
         left++;
       }
-
       while (array[right] > pivot) {
         right--;
       }
-
       if (left <= right) {
         [array[left], array[right]] = [array[right], array[left]];
         left++;
         right--;
       }
     }
-
     return left;
   }
 
@@ -130,20 +128,15 @@ function quickSort(unsorted) {
     if (array.length <= 1) {
       return array;
     }
-
     const index = partition(array, left, right);
-
     if (left < index - 1) {
       quick(array, left, index - 1);
     }
-
     if (right > index) {
       quick(array, index, right);
     }
-
     return array;
   }
-
   return quick(unsorted, 0, unsorted.length - 1);
 }
 ```
@@ -190,12 +183,44 @@ function mergeSort(array) {
         return result;
     }
     function split(array) {
+        if (array.length === 1) {
+            return array;
+        }
         const mid = Math.floor(array.length / 2);
         const arrL = array.slice(0, mid);
         const arrR = array.slice(mid);
         return merge(split(arrL), split(arrR));
     }
     return split(array);
+}
+function mergeSort(array) {
+    function merge(arrL, arrR) {
+        let indexL = indexR = 0;
+        const lenL = arrL.length;
+        const lenR = arrR.length;
+        const result = [];
+        while (indexL < lenL && indexR < lenR) {
+            if (arrL[indexL] <= arrR[indexR]) {
+                result.push(arrL[indexL++]);
+            } else {
+                result.push(arrR[indexR++]);
+            }
+        }
+        while (indexL < lenL) {
+            result.push(arrL[indexL++])
+        }
+        while (indexR < lenR) {
+            result.push(arrR[indexR++])
+        }
+        return result;
+    }
+    if (array.length === 1) {
+        return array;
+    }
+    const mid = Math.floor(array.length / 2);
+    const arrL = array.slice(0, mid);
+    const arrR = array.slice(mid);
+    return merge(mergeSort(arrL), mergeSort(arrR));
 }
 ```
 时间复杂度上，最好、平均和最坏情况都是 O(nlog(n))。空间复杂度是O(n)。

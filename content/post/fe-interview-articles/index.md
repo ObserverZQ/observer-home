@@ -299,6 +299,48 @@ function  judgeType(obj) {
       return map[toString.call(obj)];
     }
 ```
+
+用weakMap实现，解决循环引用问题：
+```javascript
+let map = new WeakMap();
+function deepClone (obj) {
+  if (obj instanceof Object) {
+    if (map.has(obj)) {
+      return map.get(obj);
+    }
+    let newObj;
+    // special types
+    if (obj instanceof Array) {
+      newObj = [];
+    } else if (obj instanceof Date) {
+      newObj = new Date(obj);
+    } else if (obj instanceof Function) {
+      newObj = function () {
+        return obj.apply(this, arguments);
+      }
+    } else if (obj instanceof RegExp) {
+      newObj = new RegExp(obj.source, obj.flags);
+    } else {
+      newObj = {};
+    }
+
+    // shallow copy of the current obj and store it in the weakmap
+    let descriptor = Object.getOwnPropertyDescriptors(obj);
+    let clone = Object.create(Object.getPrototypeOf(obj), descriptor);
+    map.set(obj, clone);
+
+    // iterate
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        newObj[key] = deepClone(obj[key]);
+      }
+    }
+    return newObj;
+  } else {
+    return obj;
+  }
+}
+```
 * 基本数据类型和引用数据类型有什么区别？→ 引用数据变量存的是地址
 5种基本数据类型Undefined、Null、Boolean、Number 和 String，变量是直接按值存放的，存放在栈内存中的简单数据段，可以直接访问。存放在堆内存中的对象，变量保存的是一个指针，这个指针指向另一个位置。当需要访问引用类型（如对象，数组等）的值时，首先从栈中获得该对象的地址指针，然后再从堆内存中取得所需的数据。
 
@@ -528,3 +570,140 @@ React是在组件JS代码中，通过原生JS实现模板中的常见语法，�
 Vue是在和组件JS代码分离的单独的模板中，通过指令来实现的，比如条件语句就需要 v-if 来实现。
 对这一点，我个人比较喜欢React的做法，因为他更加纯粹更加原生，而Vue的做法显得有些独特，会把HTML弄得很乱。举个例子，说明React的好处：
 react中render函数是支持闭包特性的，所以我们import的组件在render中可以直接调用。但是在Vue中，由于模板中使用的数据都必须挂在 this 上进行一次中转，所以我们import 一个组件完了之后，还需要在 components 中再声明下，这样显然是很奇怪但又不得不这样的做法。
+
+手写instanceof
+```javascript
+Function.prototype.myInstanceOf = (instance, type) => {
+  let proto = instance.__proto__;
+  let prototype = type.prototype;
+  while (proto !== null) {
+    if (proto === prototype) {
+      return true;
+    }
+    proto = proto.__proto__;
+  }
+  return false;
+}
+```
+
+手写bind
+```javascript
+Function.prototype.bind = function(objToBind, ...args) {
+  // 调用时这里的this是要bind的函数
+  const fn = this;
+  return function() {
+    return fn.apply(objToBind, args.concat(...arguments));
+  }
+}
+```
+手写call
+```javascript
+Function.prototype.myCall = function(context, ...args) {
+  const ctx = context || window;
+  let fn = Symbol();
+  ctx[fn] = this;
+  let result = ctx[fn](...args);
+  delete ctx.fn;
+  return result;
+}
+```
+手写apply
+```javascript
+Function.prototype.myApply = function(context, ...args) {
+  // 调用时这里的this是要bind的函数
+  const ctx = context || window;
+  let fn = Symbol();
+  ctx[fn] = this;
+  let result = ctx[fn](args);
+  delete ctx.fn;
+  return result;
+}
+```
+
+js继承
+```javascript
+// https://segmentfault.com/a/1190000015727237
+// https://github.com/mqyqingfeng/Blog/issues/16
+function Animal (name) {
+  this.name = name;
+}
+Animal.prototype.eat = function () {
+  console.log(this.name + ' is eating.');
+}
+function Cat(name, gender) {
+  Animal.call(this, name);
+  this.gender = gender;
+}
+Cat.prototype = Object.create(Animal.prototype);
+Cat.prototype.constructor = Cat;
+
+// 原型式继承
+function inheritObject(o) {
+  let F = function () {};
+  F.prototype = o;
+  return new F();
+}
+var person = {
+  name: 'Kelvin',
+  friends: ['Amanda', 'Nico']
+}
+var son = inheritObject(person);
+son.name = 'Stephen';
+son.friends.push('Tom');
+
+var son2 = inheritObject(person);
+son2.name = 'Maguire';
+son2.friends.push('Thompson');
+console.log(person.friends); // ['Amanda', 'Nico', 'Tom', 'Thompson']
+// ECMAScript 5 通过新增 Object.create()方法规范化了原型式继承。这个方法接收两个参数:一 个用作新对象原型的对象和(可选的)一个为新对象定义额外属性的对象。在传入一个参数的情况下， Object.create()与 object()方法的行为相同。
+
+// 寄生组合继承
+function inheritPrototype (subType, superType) {
+  var prototype = inheritObject(superType.prototype);
+  prototype.constructor = subType;
+  subType.prototype = prototype;
+}
+function Parent(name) {
+  this.name = name;
+  this.colors = ['red', 'green', 'blue'];
+}
+Parent.prototype.sayName = function () {
+  console.log('my name is ' + this.name);
+}
+function Son(name, age) {
+  Parent.call(this);
+  this.age = age;
+}
+inheritPrototype(Son, Parent);
+Son.prototype.sayAge = function () {
+  console.log('my age is ' + this.age);
+}
+// class继承s
+// 核心： ES6继承的结果和寄生组合继承相似，本质上，ES6继承是一种语法糖。
+// 但是，寄生组合继承是先创建子类实例this对象，然后再对其增强；而ES6先将父类实例对象的属性和方法，加到this上面（所以必须先调用super方法），然后再用子类的构造函数修改this。
+class A {}
+
+class B extends A {
+  constructor() {
+    super(); // super是父类的构造函数，调用了实例
+  }
+}
+// ES6实现继承的具体原理：
+class A {
+}
+
+class B {
+}
+
+Object.setPrototypeOf = function (obj, proto) {
+  obj.__proto__ = proto;
+  return obj;
+}
+
+// B 的实例继承 A 的实例
+Object.setPrototypeOf(B.prototype, A.prototype);
+
+// B 继承 A 的静态属性
+Object.setPrototypeOf(B, A);
+
+```
